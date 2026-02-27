@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sailing Sensor Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="stylesheet" media="print" onload="this.media='all'"
+  href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap">
+<noscript><link rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap"></noscript>
+<style>
+
+  :root {
+    --bg:       #0a0e14;
+    --panel:    #0f1520;
+    --card:     #141c2a;
+    --border:   #1e2d45;
+    --accent:   #00b4d8;
+    --accent2:  #f4a261;
+    --accent3:  #52b788;
+    --red:      #e63946;
+    --text:     #c9d6e3;
+    --dim:      #4a6080;
+    --bright:   #e8f4f8;
+    --glow:     rgba(0,180,216,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ---- HEADER ---- */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .logo span { color: var(--dim); font-weight: 300; }
+  .status-bar {
+    display: flex; gap: 20px; align-items: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent3);
+    box-shadow: 0 0 6px var(--accent3);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .time-display {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+
+  /* ---- MAIN GRID ---- */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 12px;
+    padding: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* ---- SECTION CARDS ---- */
+  .section-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .section-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 10px 10px 0 0;
+  }
+  .section-card.tide-card::before  { background: linear-gradient(90deg, var(--accent2), transparent); }
+  .section-card.wind-card::before  { background: linear-gradient(90deg, var(--accent), transparent); }
+  .section-card.boat-card::before  { background: linear-gradient(90deg, var(--accent3), transparent); }
+  .section-card.attitude-card::before { background: linear-gradient(90deg, var(--red), transparent); }
+  .section-card.output-card::before { background: linear-gradient(90deg, var(--dim), transparent); }
+
+  .card-title {
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .icon { font-size: 14px; }
+  .tide-card  .card-title { color: var(--accent2); }
+  .wind-card  .card-title { color: var(--accent); }
+  .boat-card  .card-title { color: var(--accent3); }
+  .attitude-card .card-title { color: var(--red); }
+  .output-card .card-title { color: var(--dim); }
+
+  /* ---- COMPASS ROSE ---- */
+  .compass-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+  .compass-container {
+    position: relative;
+    width: 110px;
+    height: 110px;
+    flex-shrink: 0;
+  }
+  canvas.compass {
+    cursor: grab;
+    border-radius: 50%;
+  }
+  canvas.compass:active { cursor: grabbing; }
+  .compass-readout {
+    flex: 1;
+  }
+  .compass-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--bright);
+    line-height: 1;
+  }
+  .compass-unit {
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    margin-top: 4px;
+  }
+
+  /* ---- SLIDERS ---- */
+  .param-row {
+    margin-bottom: 10px;
+  }
+  .param-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .param-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--dim);
+    font-weight: 600;
+  }
+  .param-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--bright);
+  }
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range].main-slider {
+    background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--pct,50%), #1e2d45 var(--pct,50%));
+  }
+  input[type=range].noise-slider {
+    background: linear-gradient(to right, var(--accent2) 0%, var(--accent2) var(--pct,0%), #1e2d45 var(--pct,0%));
+  }
+  input[type=range].motion-slider {
+    background: linear-gradient(to right, var(--red) 0%, var(--red) var(--pct,50%), #1e2d45 var(--pct,50%));
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 6px rgba(0,180,216,0.4);
+  }
+  input[type=range].main-slider::-webkit-slider-thumb  { background: var(--accent); }
+  input[type=range].noise-slider::-webkit-slider-thumb { background: var(--accent2); }
+  input[type=range].motion-slider::-webkit-slider-thumb { background: var(--red); }
+
+  /* ---- ATTITUDE SECTION ---- */
+  .attitude-card {
+    grid-column: 1 / -1;
+  }
+  .attitude-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+  }
+  .attitude-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .attitude-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--red);
+    font-weight: 600;
+  }
+  canvas.attitude-viz {
+    border: 1px solid #1e2d45;
+    border-radius: 6px;
+  }
+  .attitude-readout {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 22px;
+    color: var(--bright);
+    text-align: center;
+  }
+  .attitude-controls {
+    width: 100%;
+  }
+
+  /* ---- OUTPUT PANEL ---- */
+  .output-card {
+    grid-column: 1 / -1;
+  }
+  .output-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .out-cell {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+  .out-key {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 4px;
+  }
+  .out-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+    color: var(--bright);
+  }
+  .out-val.wind-col  { color: var(--accent); }
+  .out-val.boat-col  { color: var(--accent3); }
+  .out-val.tide-col  { color: var(--accent2); }
+  .out-val.att-col   { color: var(--red); }
+
+  .stream-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--accent3);
+    height: 100px;
+    overflow-y: auto;
+    line-height: 1.6;
+  }
+  .stream-box .ts { color: var(--dim); }
+  .stream-box .tag { color: var(--accent2); }
+
+  /* ---- DIVIDER ---- */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 10px 0;
+  }
+
+  /* ---- CONTROLS BAR ---- */
+  .controls-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 16px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    position: sticky; bottom: 0;
+  }
+  .btn {
+    padding: 7px 18px;
+    border-radius: 5px;
+    border: 1px solid;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-run {
+    background: var(--accent3);
+    border-color: var(--accent3);
+    color: #000;
+  }
+  .btn-run:hover { filter: brightness(1.2); }
+  .btn-stop {
+    background: transparent;
+    border-color: var(--red);
+    color: var(--red);
+  }
+  .btn-stop:hover { background: rgba(230,57,70,0.1); }
+  .btn-reset {
+    background: transparent;
+    border-color: var(--dim);
+    color: var(--dim);
+  }
+  .btn-reset:hover { border-color: var(--text); color: var(--text); }
+
+  .rate-select {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    padding: 6px 10px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+  .counter-display {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--dim);
+    margin-left: auto;
+  }
+
+  /* ---- SCENARIO PRESETS ---- */
+  .preset-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .preset-btn {
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--dim);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .preset-btn:hover, .preset-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--glow);
+  }
+  .preset-btn.tacking-active {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    background: rgba(244,162,97,0.15);
+    animation: pulse 1s ease-in-out infinite;
+  }
+
+  /* inline input */
+  .inline-input {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--bright);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 2px 6px;
+    width: 60px;
+    text-align: right;
+  }
+  .inline-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .var-source {
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+  }
+  .var-source.live {
+    color: var(--accent3);
+    border: 1px solid var(--accent3);
+  }
+  .var-source.fallback {
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--panel); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">SAIL<span>SIM</span></div>
+  <div class="preset-row" style="margin-bottom:0">
+    <button class="preset-btn active" data-preset="upwind" onclick="applyPreset('upwind', this)">Upwind Beat</button>
+    <button class="preset-btn" data-preset="reach" onclick="applyPreset('reach', this)">Beam Reach</button>
+    <button class="preset-btn" data-preset="downwind" onclick="applyPreset('downwind', this)">Downwind Run</button>
+    <button class="preset-btn" data-preset="tack" id="tackBtn" onclick="startTack(this)">Tack</button>
+    <button class="preset-btn" data-preset="storm" onclick="applyPreset('storm', this)">Heavy Weather</button>
+  </div>
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusLabel" style="color:var(--accent3)">STANDBY</span>
+    <div class="time-display" id="timeDisplay">00:00:00.000</div>
+  </div>
+</header>
+
+<div class="main-grid">
+
+  <!-- === TIDE / CURRENT === -->
+  <div class="section-card tide-card">
+    <div class="card-title"><span class="icon">~</span> TIDE / CURRENT</div>
+    <div class="compass-wrap">
+      <div class="compass-container">
+        <canvas class="compass" id="tideCompass" width="110" height="110"></canvas>
+      </div>
+      <div class="compass-readout">
+        <div class="compass-value" id="tideDirVal">045</div>
+        <div class="compass-unit">TRUE SET</div>
+      </div>
+    </div>
+    <div class="param-row">
+      <div class="param-header">
+        <span class="param-label">Speed (kts)</span>
+        <span class="param-val" id="tideSpeedVal">1.5</span>
+      </div>
+      <input type="range" class="main-slider" id="tideSpeed" min="0" max="6" step="0.1" value="1.5"
+             style="--pct:25%" oninput="updateSlider(this,'tideSpeedVal',1)">
+    </div>
+    <div class="divider"></div>
+    <div class="param-row">
+      <div class="param-header">
+        <span class="param-label" style="color:var(--accent2)">Direction noise (deg)</span>
+        <span class="param-val" id="tideDirSigVal">0.0</span>
+      </div>
+      <input type="range" class="noise-slider" id="tideDirSig" min="0" max="20" step="0.5" value="0"
+             style="--pct:0%" oninput="updateSlider(this,'tideDirSigVal',1)">
+    </div>
+    <div class="param-row">
+      <div class="param-header">
+        <span class="param-label" style="color:var(--accent2)">Speed noise (kts)</span>
+        <span class="param-val" id="tideSpeedSigVal">0.0</span>
+      </div>
+      <input type="range" class="noise-slider" id="tideSpeedSig" min="0" max="2" step="0.05" value="0"
+             style="--pct:0%" oninput="updateSlider(this,'tideSpeedSigVal',2)">
+    </div>
+  </div>
+
+  <!-- === TRUE WIND === -->
+  <div class="section-card wind-card">
+    <div class="card-title"><span class="icon">&gt;</span> TRUE WIND</div>
+    <div class="compass-wrap">
+      <div class="compass-container">
+        <canvas class="compass" id="windCompass" width="110" height="110"></canvas>
+      </div>
+      <div class="compass-readout">
+        <div class="compass-value" id="windDirVal">225</div>
+        <div class="compass-unit">TRUE FROM</div>
+      </div>
+    </div>
+    <div class="param-row">
+      <div class="param-header">
+        <span class="param-label">Speed (kts)</span>
+        <span class="param-val" id="windSpeedVal">12.0</span>
+      </div>
+      <input type="range" class="main-slider" id="windSpeed" min="0" max="60" step="0.5" value="12"
+             style="--pct:20%" oninput="updateSlider(this,'windSpeedVal',1)">
+    </div>
+    <div class="divider"></div>
+    <div class="param-row">
+      <div class="param-header">
+        <span class="param-label" style="color:var(--accent2)">Direction noise (deg)</span>
+        <span class="param-val" id="windDirSigVal">0.0</span>
+      </div>
+      <input type="range" class="noise-slider" id="windDirSig" min="0" max="30" step="0.5" value="0"
+             style="--pct:0%" oninput="updateSlider(this,'windDirSigVal',1)">
+    </div>
+    <div class="param-row">
+      <div class="param-header">
+        <span class="param-label" style="color:var(--accent2)">Speed noise (kts)</span>
+        <span class="param-val" id="windSpeedSigVal">0.0</span>
+      </div>
+      <input type="range" class="noise-slider" id="windSpeedSig" min="0" max="10" step="0.1" value="0"
+             style="--pct:0%" oninput="updateSlider(this,'windSpeedSigVal',1)">
+    </div>
+  </div>
+
+  <!-- === BOAT === -->
+  <div class="section-card boat-card">
+    <div class="card-title"><span class="icon">*</span> BOAT</div>
+    <div class="compass-wrap">
+      <div class="compass-container">
+        <canvas class="compass" id="boatCompass" width="110" height="110"></canvas>
+      </div>
+      <div class="compass-readout">
+        <div class="compass-value" id="boatHdgVal">045</div>
+        <div class="compass-unit">MAG HDG</div>
+      </div>
+    </div>
+    <div class="param-row">
+      <div class="param-header">
+        <span class="param-label">STW (kts)</span>
+        <span class="param-val" id="boatSTWVal">6.5</span>
+      </div>
+      <input type="range" class="main-slider" id="boatSTW" min="0" max="20" step="0.1" value="6.5"
+             style="--pct:32%" oninput="updateSlider(this,'boatSTWVal',1)">
+    </div>
+    <div class="param-row">
+      <div class="param-header">
+        <span class="param-label">Mast Height (m)</span>
+        <span class="param-val" id="mastHeightVal">18.0</span>
+      </div>
+      <input type="range" class="main-slider" id="mastHeight" min="5" max="35" step="0.5" value="18"
+             style="--pct:37%" oninput="updateSlider(this,'mastHeightVal',1)">
+    </div>
+    <div class="param-row">
+      <div class="param-header">
+        <span class="param-label">Mag Variation (deg)</span>
+        <span class="param-val" id="variationVal">0.0</span>
+      </div>
+      <input type="range" class="main-slider" id="variationSlider" min="-30" max="30" step="0.5" value="0"
+             style="--pct:50%" oninput="updateSlider(this,'variationVal',1)">
+    </div>
+    <div class="divider"></div>
+    <div class="param-row">
+      <div class="param-header">
+        <span class="param-label" style="color:var(--accent2)">Heading noise (deg)</span>
+        <span class="param-val" id="boatHdgSigVal">0.0</span>
+      </div>
+      <input type="range" class="noise-slider" id="boatHdgSig" min="0" max="15" step="0.25" value="0"
+             style="--pct:0%" oninput="updateSlider(this,'boatHdgSigVal',1)">
+    </div>
+    <div class="param-row">
+      <div class="param-header">
+        <span class="param-label" style="color:var(--accent2)">STW noise (kts)</span>
+        <span class="param-val" id="boatSTWSigVal">0.0</span>
+      </div>
+      <input type="range" class="noise-slider" id="boatSTWSig" min="0" max="3" step="0.05" value="0"
+             style="--pct:0%" oninput="updateSlider(this,'boatSTWSigVal',2)">
+    </div>
+  </div>
+
+  <!-- === ATTITUDE === -->
+  <div class="section-card attitude-card">
+    <div class="card-title"><span class="icon">+</span> ATTITUDE — SINUSOIDAL MOTION MODEL</div>
+    <div class="attitude-inner">
+
+      <!-- YAW -->
+      <div class="attitude-item">
+        <div class="attitude-label">YAW RATE</div>
+        <canvas class="attitude-viz" id="yawViz" width="220" height="90"></canvas>
+        <div class="attitude-readout" id="yawReadout">0.0 deg/s</div>
+        <div class="attitude-controls">
+          <div class="param-row">
+            <div class="param-header">
+              <span class="param-label">Amplitude (deg/s)</span>
+              <span class="param-val" id="yawAmpVal">0.0</span>
+            </div>
+            <input type="range" class="motion-slider" id="yawAmp" min="0" max="20" step="0.5" value="0"
+                   style="--pct:0%" oninput="updateSlider(this,'yawAmpVal',1)">
+          </div>
+          <div class="param-row">
+            <div class="param-header">
+              <span class="param-label">Period (s)</span>
+              <span class="param-val" id="yawPeriodVal">8.0</span>
+            </div>
+            <input type="range" class="motion-slider" id="yawPeriod" min="1" max="30" step="0.5" value="8"
+                   style="--pct:24%" oninput="updateSlider(this,'yawPeriodVal',1)">
+          </div>
+          <div class="param-row">
+            <div class="param-header">
+              <span class="param-label">Noise</span>
+              <span class="param-val" id="yawSigVal">0.0</span>
+            </div>
+            <input type="range" class="noise-slider" id="yawSig" min="0" max="5" step="0.1" value="0"
+                   style="--pct:0%" oninput="updateSlider(this,'yawSigVal',1)">
+          </div>
+        </div>
+      </div>
+
+      <!-- PITCH -->
+      <div class="attitude-item">
+        <div class="attitude-label">PITCH</div>
+        <canvas class="attitude-viz" id="pitchViz" width="220" height="90"></canvas>
+        <div class="attitude-readout" id="pitchReadout">0.0 deg</div>
+        <div class="attitude-controls">
+          <div class="param-row">
+            <div class="param-header">
+              <span class="param-label">Amplitude (deg)</span>
+              <span class="param-val" id="pitchAmpVal">0.0</span>
+            </div>
+            <input type="range" class="motion-slider" id="pitchAmp" min="0" max="25" step="0.5" value="0"
+                   style="--pct:0%" oninput="updateSlider(this,'pitchAmpVal',1)">
+          </div>
+          <div class="param-row">
+            <div class="param-header">
+              <span class="param-label">Period (s)</span>
+              <span class="param-val" id="pitchPeriodVal">5.0</span>
+            </div>
+            <input type="range" class="motion-slider" id="pitchPeriod" min="1" max="20" step="0.5" value="5"
+                   style="--pct:21%" oninput="updateSlider(this,'pitchPeriodVal',1)">
+          </div>
+          <div class="param-row">
+            <div class="param-header">
+              <span class="param-label">Noise</span>
+              <span class="param-val" id="pitchSigVal">0.0</span>
+            </div>
+            <input type="range" class="noise-slider" id="pitchSig" min="0" max="5" step="0.1" value="0"
+                   style="--pct:0%" oninput="updateSlider(this,'pitchSigVal',1)">
+          </div>
+        </div>
+      </div>
+
+      <!-- ROLL -->
+      <div class="attitude-item">
+        <div class="attitude-label">ROLL (HEEL)</div>
+        <canvas class="attitude-viz" id="rollViz" width="220" height="90"></canvas>
+        <div class="attitude-readout" id="rollReadout">0.0 deg</div>
+        <div class="attitude-controls">
+          <div class="param-row">
+            <div class="param-header">
+              <span class="param-label">Mean Heel (deg)</span>
+              <span class="param-val" id="rollMeanVal">0.0</span>
+            </div>
+            <input type="range" class="main-slider" id="rollMean" min="-30" max="30" step="0.5" value="0"
+                   style="--pct:50%" oninput="updateSlider(this,'rollMeanVal',1)">
+          </div>
+          <div class="param-row">
+            <div class="param-header">
+              <span class="param-label">Amplitude (deg)</span>
+              <span class="param-val" id="rollAmpVal">0.0</span>
+            </div>
+            <input type="range" class="motion-slider" id="rollAmp" min="0" max="30" step="0.5" value="0"
+                   style="--pct:0%" oninput="updateSlider(this,'rollAmpVal',1)">
+          </div>
+          <div class="param-row">
+            <div class="param-header">
+              <span class="param-label">Period (s)</span>
+              <span class="param-val" id="rollPeriodVal">4.0</span>
+            </div>
+            <input type="range" class="motion-slider" id="rollPeriod" min="1" max="20" step="0.5" value="4"
+                   style="--pct:16%" oninput="updateSlider(this,'rollPeriodVal',1)">
+          </div>
+          <div class="param-row">
+            <div class="param-header">
+              <span class="param-label">Noise</span>
+              <span class="param-val" id="rollSigVal">0.0</span>
+            </div>
+            <input type="range" class="noise-slider" id="rollSig" min="0" max="5" step="0.1" value="0"
+                   style="--pct:0%" oninput="updateSlider(this,'rollSigVal',1)">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- === OUTPUT === -->
+  <div class="section-card output-card">
+    <div class="card-title"><span class="icon">&gt;</span> COMPUTED OUTPUTS</div>
+    <div class="output-grid">
+      <div class="out-cell"><div class="out-key">AWS</div><div class="out-val wind-col" id="out-aws">--</div></div>
+      <div class="out-cell"><div class="out-key">AWA</div><div class="out-val wind-col" id="out-awa">--</div></div>
+      <div class="out-cell"><div class="out-key">TWS</div><div class="out-val wind-col" id="out-tws">--</div></div>
+      <div class="out-cell"><div class="out-key">TWA</div><div class="out-val wind-col" id="out-twa">--</div></div>
+      <div class="out-cell"><div class="out-key">TWD</div><div class="out-val wind-col" id="out-twd">--</div></div>
+      <div class="out-cell"><div class="out-key">VMG</div><div class="out-val wind-col" id="out-vmg">--</div></div>
+
+      <div class="out-cell"><div class="out-key">STW</div><div class="out-val boat-col" id="out-stw">--</div></div>
+      <div class="out-cell"><div class="out-key">SOG</div><div class="out-val boat-col" id="out-sog">--</div></div>
+      <div class="out-cell"><div class="out-key">HDG</div><div class="out-val boat-col" id="out-hdg">--</div></div>
+      <div class="out-cell"><div class="out-key">COG</div><div class="out-val boat-col" id="out-cog">--</div></div>
+      <div class="out-cell"><div class="out-key">SET</div><div class="out-val tide-col" id="out-set">--</div></div>
+      <div class="out-cell"><div class="out-key">DFT</div><div class="out-val tide-col" id="out-dft">--</div></div>
+
+      <div class="out-cell"><div class="out-key">ROLL</div><div class="out-val att-col" id="out-roll">--</div></div>
+      <div class="out-cell"><div class="out-key">PITCH</div><div class="out-val att-col" id="out-pitch">--</div></div>
+      <div class="out-cell"><div class="out-key">YAW RATE</div><div class="out-val att-col" id="out-yaw">--</div></div>
+      <div class="out-cell"><div class="out-key">MAST Vx</div><div class="out-val att-col" id="out-mx">--</div></div>
+      <div class="out-cell"><div class="out-key">MAST Vy</div><div class="out-val att-col" id="out-my">--</div></div>
+      <div class="out-cell"><div class="out-key">AWS+MAST</div><div class="out-val att-col" id="out-awsraw">--</div></div>
+    </div>
+    <div class="stream-box" id="streamBox">
+      <span style="color:var(--dim)">// Waiting for simulation start...</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="controls-bar">
+  <button class="btn btn-run" onclick="startSim()">START</button>
+  <button class="btn btn-stop" onclick="stopSim()">STOP</button>
+  <button class="btn btn-reset" onclick="resetSim()">RESET</button>
+  <select class="rate-select" id="rateSelect">
+    <option value="100">10 Hz</option>
+    <option value="50">20 Hz</option>
+    <option value="200">5 Hz</option>
+    <option value="1000">1 Hz</option>
+  </select>
+  <span style="color:var(--dim);font-size:11px;letter-spacing:1px">OUTPUT RATE</span>
+  <div class="counter-display" id="counterDisplay">Samples: 0 | T: 0.000s</div>
+</div>
+
+<script>
+// === SIMULATION STATE ===
+let simRunning = false;
+let simTimer = null;
+let simTime = 0;
+let sampleCount = 0;
+let mastHeight = 18; // meters, loaded from plugin config
+let magVariation = 0; // degrees, positive = East
+const DEG = Math.PI / 180;
+
+// Tacking state
+let tackAnimating = false;
+let tackStartHdg = 0;
+let tackTargetHdg = 0;
+let tackRate = 20; // deg/sec
+let tackDirection = 1; // +1 or -1
+
+// Base motion periods (saved when user adjusts, used for preset scaling)
+let baseYawPeriod = 8;
+let basePitchPeriod = 5;
+let baseRollPeriod = 4;
+
+// === LOAD CONFIG FROM PLUGIN ===
+async function loadConfig() {
+  try {
+    const resp = await fetch('/sailsim-plugin/config');
+    if (resp.ok) {
+      const cfg = await resp.json();
+      mastHeight = cfg.mastHeight || 18;
+      magVariation = cfg.variationDeg || 0;
+
+      setSlider('mastHeight', mastHeight);
+      setValDisplay('mastHeightVal', mastHeight, 1);
+      setSlider('variationSlider', magVariation);
+      setValDisplay('variationVal', magVariation, 1);
+    }
+  } catch (e) {
+    console.warn('Could not load plugin config, using defaults', e);
+  }
+}
+
+// === GAUSSIAN NOISE ===
+function randn() {
+  let u = 0, v = 0;
+  while(u === 0) u = Math.random();
+  while(v === 0) v = Math.random();
+  return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+}
+function noise(sigma) { return sigma * randn(); }
+
+// === GET ALL PARAMS ===
+function getParams() {
+  return {
+    tideDir:    +(document.getElementById('tideCompass').dataset.angle ?? 45),
+    tideSpeed:  +document.getElementById('tideSpeed').value,
+    tideDirSig: +document.getElementById('tideDirSig').value,
+    tideSpeedSig: +document.getElementById('tideSpeedSig').value,
+
+    windDir:    +(document.getElementById('windCompass').dataset.angle ?? 225),
+    windSpeed:  +document.getElementById('windSpeed').value,
+    windDirSig: +document.getElementById('windDirSig').value,
+    windSpeedSig: +document.getElementById('windSpeedSig').value,
+
+    boatHdg:    +(document.getElementById('boatCompass').dataset.angle ?? 45),
+    boatSTW:    +document.getElementById('boatSTW').value,
+    boatHdgSig: +document.getElementById('boatHdgSig').value,
+    boatSTWSig: +document.getElementById('boatSTWSig').value,
+
+    yawAmp:     +document.getElementById('yawAmp').value,
+    yawPeriod:  +document.getElementById('yawPeriod').value,
+    yawSig:     +document.getElementById('yawSig').value,
+
+    pitchAmp:   +document.getElementById('pitchAmp').value,
+    pitchPeriod: +document.getElementById('pitchPeriod').value,
+    pitchSig:   +document.getElementById('pitchSig').value,
+
+    rollMean:   +document.getElementById('rollMean').value,
+    rollAmp:    +document.getElementById('rollAmp').value,
+    rollPeriod: +document.getElementById('rollPeriod').value,
+    rollSig:    +document.getElementById('rollSig').value,
+
+    mastHeight: +document.getElementById('mastHeight').value,
+    variation:  +document.getElementById('variationSlider').value || 0,
+  };
+}
+
+// === COMPUTE ONE SAMPLE ===
+function computeSample(t) {
+  const p = getParams();
+
+  // True wind (with noise) — TWD is true direction wind comes FROM
+  const tws = Math.max(0, p.windSpeed + noise(p.windSpeedSig));
+  const twd = (p.windDir + noise(p.windDirSig) + 360) % 360;
+
+  // Boat heading (magnetic) & STW (with noise)
+  const hdgMag = (p.boatHdg + noise(p.boatHdgSig) + 360) % 360;
+  const stw = Math.max(0, p.boatSTW + noise(p.boatSTWSig));
+
+  // True heading for wind calculations
+  const hdgTrue = (hdgMag + p.variation + 360) % 360;
+
+  // Tide/current
+  const tideSpd = Math.max(0, p.tideSpeed + noise(p.tideSpeedSig));
+  const tideDir = (p.tideDir + noise(p.tideDirSig) + 360) % 360;
+
+  // Attitude (sinusoidal)
+  const roll  = p.rollMean + p.rollAmp * Math.sin(2*Math.PI*t/p.rollPeriod) + noise(p.rollSig);
+  const pitch = p.pitchAmp * Math.sin(2*Math.PI*t/p.pitchPeriod + 0.7) + noise(p.pitchSig);
+  const yawRate = p.yawAmp * Math.sin(2*Math.PI*t/p.yawPeriod + 1.2) + noise(p.yawSig);
+
+  // Mast velocity at sensor (boat-fixed horizontal components)
+  const mH = p.mastHeight;
+  const rollRad  = roll * DEG;
+  const pitchRateRad = (p.pitchAmp * 2*Math.PI/p.pitchPeriod) * Math.cos(2*Math.PI*t/p.pitchPeriod + 0.7) * DEG;
+  const rollRateRad  = (p.rollAmp  * 2*Math.PI/p.rollPeriod)  * Math.cos(2*Math.PI*t/p.rollPeriod)       * DEG;
+
+  const mastVx = -pitchRateRad * mH * Math.cos(rollRad);   // fore-aft
+  const mastVy =  rollRateRad  * mH;                        // athwartships
+
+  // Convert true wind to Cartesian (wind FROM direction → wind vector points opposite)
+  const twdRad = twd * DEG;
+  const twVx = -tws * Math.sin(twdRad);
+  const twVy = -tws * Math.cos(twdRad);
+
+  // Boat velocity vector (using true heading)
+  const hdgRad = hdgTrue * DEG;
+  const bVx = stw * Math.sin(hdgRad);
+  const bVy = stw * Math.cos(hdgRad);
+
+  // Apparent wind (at a fixed mast, no motion) = TW - boat velocity
+  const awVx = twVx - bVx;
+  const awVy = twVy - bVy;
+  const aws  = Math.sqrt(awVx*awVx + awVy*awVy);
+
+  // atan2(awVx,awVy) gives direction the wind vector is going TO; +180 converts to FROM
+  const awFromDeg = (Math.atan2(awVx, awVy) / DEG + 180 + 360) % 360;
+  let awaRel = awFromDeg - hdgTrue;
+  // Normalize to -180..+180 (positive = starboard)
+  while (awaRel > 180) awaRel -= 360;
+  while (awaRel < -180) awaRel += 360;
+
+  // Raw apparent wind AT SENSOR (add mast motion perturbation)
+  // Rotate mast velocity into global frame to combine with apparent wind
+  const sinH = Math.sin(hdgRad), cosH = Math.cos(hdgRad);
+  const mastVxGlobal = mastVx * sinH + mastVy * cosH;  // project to N-E
+  const mastVyGlobal = mastVx * cosH - mastVy * sinH;
+  const awRawVx = awVx + mastVxGlobal;
+  const awRawVy = awVy + mastVyGlobal;
+  const awsRaw = Math.sqrt(awRawVx*awRawVx + awRawVy*awRawVy);
+
+  // Tide vector
+  const tideDirRad = tideDir * DEG;
+  const tiVx = tideSpd * Math.sin(tideDirRad);
+  const tiVy = tideSpd * Math.cos(tideDirRad);
+
+  // SOG / COG (boat + tide)
+  const sogVx = bVx + tiVx;
+  const sogVy = bVy + tiVy;
+  const sog = Math.sqrt(sogVx*sogVx + sogVy*sogVy);
+  const cog = (Math.atan2(sogVx, sogVy) / DEG + 360) % 360;
+
+  // TWA (true wind angle relative to boat heading)
+  const twaDeg = ((twd - hdgTrue) % 360 + 360) % 360;
+  let twa = twaDeg > 180 ? twaDeg - 360 : twaDeg;
+
+  // VMG toward wind
+  const vmg = stw * Math.cos(twa * DEG);
+
+  return {
+    tws, twd, hdg: hdgMag, stw, sog, cog, tideDir, tideSpd,
+    aws, awa: awaRel, awsRaw,
+    twa, vmg,
+    roll, pitch, yawRate, mastVx, mastVy,
+    variation: p.variation,
+    t
+  };
+}
+
+// === FORMAT HELPERS ===
+const f1 = v => v.toFixed(1);
+const f2 = v => v.toFixed(2);
+const f0 = v => ((v % 360 + 360) % 360).toFixed(0).padStart(3,'0');
+
+function updateOutputs(s) {
+  document.getElementById('out-aws').textContent  = f1(s.aws) + ' kt';
+  document.getElementById('out-awa').textContent  = (s.awa >= 0 ? '+' : '') + f1(s.awa) + ' deg';
+  document.getElementById('out-tws').textContent  = f1(s.tws) + ' kt';
+  document.getElementById('out-twa').textContent  = (s.twa >= 0 ? '+' : '') + f1(s.twa) + ' deg';
+  document.getElementById('out-twd').textContent  = f0(s.twd) + ' deg';
+  document.getElementById('out-vmg').textContent  = f1(s.vmg) + ' kt';
+  document.getElementById('out-stw').textContent  = f1(s.stw) + ' kt';
+  document.getElementById('out-sog').textContent  = f1(s.sog) + ' kt';
+  document.getElementById('out-hdg').textContent  = f0(s.hdg) + ' M';
+  document.getElementById('out-cog').textContent  = f0(s.cog) + ' T';
+  document.getElementById('out-set').textContent  = f0(s.tideDir) + ' T';
+  document.getElementById('out-dft').textContent  = f1(s.tideSpd) + ' kt';
+  document.getElementById('out-roll').textContent  = f1(s.roll) + ' deg';
+  document.getElementById('out-pitch').textContent = f1(s.pitch) + ' deg';
+  document.getElementById('out-yaw').textContent   = f1(s.yawRate) + ' deg/s';
+  document.getElementById('out-mx').textContent    = f2(s.mastVx) + ' m/s';
+  document.getElementById('out-my').textContent    = f2(s.mastVy) + ' m/s';
+  document.getElementById('out-awsraw').textContent = f1(s.awsRaw) + ' kt';
+
+  document.getElementById('yawReadout').textContent   = f1(s.yawRate) + ' deg/s';
+  document.getElementById('pitchReadout').textContent = f1(s.pitch) + ' deg';
+  document.getElementById('rollReadout').textContent  = f1(s.roll) + ' deg';
+}
+
+// Stream log
+let streamLines = [];
+function addStreamLine(s) {
+  const ts = s.t.toFixed(3).padStart(8,' ');
+  const line = `<span class="ts">[${ts}s]</span> ` +
+    `<span class="tag">TWS</span> ${f1(s.tws).padEnd(5)} ` +
+    `<span class="tag">TWD</span> ${f0(s.twd).padEnd(4)} ` +
+    `<span class="tag">AWS</span> ${f1(s.aws).padEnd(5)} ` +
+    `<span class="tag">AWA</span> ${(s.awa >= 0 ? '+' : '') + f1(s.awa)} ` +
+    `<span class="tag">SOG</span> ${f1(s.sog).padEnd(5)} ` +
+    `<span class="tag">COG</span> ${f0(s.cog)} ` +
+    `<span class="tag">ROLL</span> ${f1(s.roll).padEnd(6)} ` +
+    `<span class="tag">PITCH</span> ${f1(s.pitch)}`;
+  streamLines.push(line);
+  if (streamLines.length > 30) streamLines.shift();
+  const box = document.getElementById('streamBox');
+  box.innerHTML = streamLines.join('<br>');
+  box.scrollTop = box.scrollHeight;
+}
+
+// === SYNC PARAMS TO SERVER ===
+let paramSyncTimer = null;
+async function syncParams() {
+  try {
+    await fetch('/sailsim-plugin/params', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(getParams())
+    });
+  } catch (e) {
+    console.warn('Param sync failed', e);
+  }
+}
+function scheduleParamSync() {
+  clearTimeout(paramSyncTimer);
+  paramSyncTimer = setTimeout(syncParams, 50);
+}
+
+// === ATTITUDE WAVEFORM VISUALIZERS ===
+const waveHistory = { yaw: [], pitch: [], roll: [] };
+const WAVE_LEN = 220;
+
+function drawWave(canvasId, history, color, minVal, maxVal, currentVal) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#0a0e14';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = '#1e2d45';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(0, H/2); ctx.lineTo(W, H/2);
+  ctx.moveTo(0, H/4); ctx.lineTo(W, H/4);
+  ctx.moveTo(0, 3*H/4); ctx.lineTo(W, 3*H/4);
+  ctx.stroke();
+
+  if (history.length < 2) return;
+  const range = (maxVal - minVal) || 1;
+
+  ctx.beginPath();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 4;
+
+  history.forEach((v, i) => {
+    const x = (i / (WAVE_LEN - 1)) * W;
+    const y = H - ((v - minVal) / range) * H;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  const cx = W - 1;
+  const cy = H - ((currentVal - minVal) / range) * H;
+  ctx.beginPath();
+  ctx.arc(cx, Math.max(2, Math.min(H-2, cy)), 3, 0, Math.PI*2);
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 8;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function pushWave(key, val) {
+  waveHistory[key].push(val);
+  if (waveHistory[key].length > WAVE_LEN) waveHistory[key].shift();
+}
+
+// === COMPASS DRAWING ===
+function drawCompass(canvasId, angleDeg, color) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2, R = W/2 - 4;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const grad = ctx.createRadialGradient(cx, cy, R*0.7, cx, cy, R);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, color + '33');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.fill();
+
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
+  ctx.strokeStyle = color + '66'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  for (let i = 0; i < 36; i++) {
+    const a = (i * 10) * DEG;
+    const big = i % 9 === 0;
+    const r1 = R - (big ? 10 : 5);
+    ctx.beginPath();
+    ctx.moveTo(cx + R * Math.sin(a), cy - R * Math.cos(a));
+    ctx.lineTo(cx + r1 * Math.sin(a), cy - r1 * Math.cos(a));
+    ctx.strokeStyle = big ? color + 'cc' : color + '44';
+    ctx.lineWidth = big ? 1.5 : 0.8;
+    ctx.stroke();
+  }
+
+  ctx.font = 'bold 9px Rajdhani, sans-serif';
+  ctx.fillStyle = color + 'cc';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const labels = {0:'N', 90:'E', 180:'S', 270:'W'};
+  Object.entries(labels).forEach(([deg, lbl]) => {
+    const a = +deg * DEG;
+    const r = R - 16;
+    ctx.fillText(lbl, cx + r*Math.sin(a), cy - r*Math.cos(a));
+  });
+
+  const arrowRad = angleDeg * DEG;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(arrowRad);
+
+  ctx.beginPath();
+  ctx.moveTo(0, -(R - 20));
+  ctx.lineTo(-5, 0);
+  ctx.lineTo(0, 8);
+  ctx.lineTo(5, 0);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 8;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(0, 18);
+  ctx.strokeStyle = color + '66';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2);
+  ctx.fillStyle = color; ctx.fill();
+}
+
+// === COMPASS INTERACTION ===
+function setupCompass(canvasId, valueId, color, defaultAngle) {
+  const canvas = document.getElementById(canvasId);
+  canvas.dataset.angle = defaultAngle;
+  drawCompass(canvasId, defaultAngle, color);
+
+  let dragging = false;
+  function getAngle(e) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = rect.left + rect.width/2;
+    const cy = rect.top + rect.height/2;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return ((Math.atan2(clientX - cx, -(clientY - cy)) / DEG) + 360) % 360;
+  }
+  function update(e) {
+    if (!dragging) return;
+    const angle = getAngle(e);
+    canvas.dataset.angle = angle;
+    document.getElementById(valueId).textContent = Math.round(angle).toString().padStart(3,'0');
+    drawCompass(canvasId, angle, color);
+    scheduleParamSync();
+  }
+  canvas.addEventListener('mousedown', e => { dragging = true; update(e); });
+  canvas.addEventListener('touchstart', e => { dragging = true; update(e); e.preventDefault(); }, {passive:false});
+  canvas.addEventListener('mousemove', update);
+  canvas.addEventListener('touchmove', update, {passive:false});
+  window.addEventListener('mouseup', () => { dragging = false; });
+  window.addEventListener('touchend', () => { dragging = false; });
+}
+
+// === SLIDER UPDATE ===
+function updateSlider(el, valId, decimals) {
+  const v = +el.value;
+  document.getElementById(valId).textContent = v.toFixed(decimals);
+  const min = +el.min, max = +el.max;
+  const pct = ((v - min) / (max - min) * 100).toFixed(1) + '%';
+  el.style.setProperty('--pct', pct);
+  scheduleParamSync();
+}
+
+function syncAllSliders() {
+  document.querySelectorAll('input[type=range]').forEach(el => {
+    const min = +el.min, max = +el.max, v = +el.value;
+    const pct = ((v - min) / (max - min) * 100).toFixed(1) + '%';
+    el.style.setProperty('--pct', pct);
+  });
+}
+
+function setSlider(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.value = val;
+  const min = +el.min, max = +el.max;
+  const pct = ((val - min) / (max - min) * 100).toFixed(1) + '%';
+  el.style.setProperty('--pct', pct);
+}
+
+function setValDisplay(id, val, dec) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val.toFixed(dec);
+}
+
+// === SET BOAT HEADING (updates compass + display) ===
+function setBoatHeading(hdgMag) {
+  hdgMag = ((hdgMag % 360) + 360) % 360;
+  document.getElementById('boatCompass').dataset.angle = hdgMag;
+  document.getElementById('boatHdgVal').textContent = Math.round(hdgMag).toString().padStart(3,'0');
+  drawCompass('boatCompass', hdgMag, '#52b788');
+}
+
+// === PRESETS ===
+// Presets only change boat heading (to achieve target AWA) and motion periods.
+// They do NOT change wind, tide, STW, noise, roll mean, or amplitudes.
+function applyPreset(name, btnEl) {
+  if (tackAnimating) return; // don't interrupt a tack
+
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+
+  const p = getParams();
+  const twd = p.windDir;           // true wind direction (FROM)
+  const variation = p.variation;
+
+  // Wind blows FROM twd; the "downwind" direction is twd itself.
+  // To sail at a target AWA, we set true heading then convert to magnetic.
+  // AWA sign convention: positive = starboard tack
+  let targetAWA, periodScale;
+
+  switch(name) {
+    case 'upwind':
+      targetAWA = 40;   // close-hauled, starboard tack
+      periodScale = 0.80; // 20% shorter periods (choppier)
+      break;
+    case 'reach':
+      targetAWA = 90;   // beam reach, starboard tack
+      periodScale = 1.0;  // baseline
+      break;
+    case 'downwind':
+      targetAWA = 145;  // broad reach / run, starboard tack
+      periodScale = 1.25; // 25% longer periods (swells)
+      break;
+    case 'storm':
+      // Heavy weather: override everything
+      applyStormPreset();
+      return;
+    default:
+      return;
+  }
+
+  // Compute true heading to achieve the target AWA.
+  // TWA is the angle between the true wind vector and the boat's heading.
+  // twd is "wind from" direction. Wind blows TOWARD (twd+180).
+  // TWA ≈ AWA for moderate boat speeds (close enough for a preset).
+  // hdgTrue = twd + targetAWA  (starboard tack)
+  const hdgTrue = (twd + targetAWA + 360) % 360;
+  const hdgMag = (hdgTrue - variation + 360) % 360;
+  setBoatHeading(hdgMag);
+
+  // Scale motion periods relative to base periods
+  const yp = baseYawPeriod * periodScale;
+  const pp = basePitchPeriod * periodScale;
+  const rp = baseRollPeriod * periodScale;
+  setSlider('yawPeriod', yp);   setValDisplay('yawPeriodVal', yp, 1);
+  setSlider('pitchPeriod', pp); setValDisplay('pitchPeriodVal', pp, 1);
+  setSlider('rollPeriod', rp);  setValDisplay('rollPeriodVal', rp, 1);
+}
+
+// Heavy weather preset — overrides everything (like original)
+function applyStormPreset() {
+  const pr = {
+    windDir: 270, windSpeed: 38, windDirSig: 15, windSpeedSig: 6,
+    boatHdg: 40, boatSTW: 7.5, boatHdgSig: 6, boatSTWSig: 1.5,
+    tideDir: 90, tideSpeed: 2.5, tideDirSig: 5, tideSpeedSig: 0.5,
+    rollMean: 25, rollAmp: 20, rollPeriod: 3, rollSig: 2.5,
+    pitchAmp: 12, pitchPeriod: 3.5, pitchSig: 1.5,
+    yawAmp: 18, yawPeriod: 6, yawSig: 3
+  };
+
+  // Wind
+  setSlider('windSpeed', pr.windSpeed); setValDisplay('windSpeedVal', pr.windSpeed, 1);
+  setSlider('windDirSig', pr.windDirSig); setValDisplay('windDirSigVal', pr.windDirSig, 1);
+  setSlider('windSpeedSig', pr.windSpeedSig); setValDisplay('windSpeedSigVal', pr.windSpeedSig, 1);
+  document.getElementById('windCompass').dataset.angle = pr.windDir;
+  document.getElementById('windDirVal').textContent = pr.windDir.toString().padStart(3,'0');
+  drawCompass('windCompass', pr.windDir, '#00b4d8');
+
+  // Boat
+  setSlider('boatSTW', pr.boatSTW); setValDisplay('boatSTWVal', pr.boatSTW, 1);
+  setSlider('boatHdgSig', pr.boatHdgSig); setValDisplay('boatHdgSigVal', pr.boatHdgSig, 1);
+  setSlider('boatSTWSig', pr.boatSTWSig); setValDisplay('boatSTWSigVal', pr.boatSTWSig, 2);
+  setBoatHeading(pr.boatHdg);
+
+  // Tide
+  setSlider('tideSpeed', pr.tideSpeed); setValDisplay('tideSpeedVal', pr.tideSpeed, 1);
+  setSlider('tideDirSig', pr.tideDirSig); setValDisplay('tideDirSigVal', pr.tideDirSig, 1);
+  setSlider('tideSpeedSig', pr.tideSpeedSig); setValDisplay('tideSpeedSigVal', pr.tideSpeedSig, 2);
+  document.getElementById('tideCompass').dataset.angle = pr.tideDir;
+  document.getElementById('tideDirVal').textContent = pr.tideDir.toString().padStart(3,'0');
+  drawCompass('tideCompass', pr.tideDir, '#f4a261');
+
+  // Attitude
+  setSlider('rollMean', pr.rollMean); setValDisplay('rollMeanVal', pr.rollMean, 1);
+  setSlider('rollAmp', pr.rollAmp); setValDisplay('rollAmpVal', pr.rollAmp, 1);
+  setSlider('rollPeriod', pr.rollPeriod); setValDisplay('rollPeriodVal', pr.rollPeriod, 1);
+  setSlider('rollSig', pr.rollSig); setValDisplay('rollSigVal', pr.rollSig, 1);
+  setSlider('pitchAmp', pr.pitchAmp); setValDisplay('pitchAmpVal', pr.pitchAmp, 1);
+  setSlider('pitchPeriod', pr.pitchPeriod); setValDisplay('pitchPeriodVal', pr.pitchPeriod, 1);
+  setSlider('pitchSig', pr.pitchSig); setValDisplay('pitchSigVal', pr.pitchSig, 1);
+  setSlider('yawAmp', pr.yawAmp); setValDisplay('yawAmpVal', pr.yawAmp, 1);
+  setSlider('yawPeriod', pr.yawPeriod); setValDisplay('yawPeriodVal', pr.yawPeriod, 1);
+  setSlider('yawSig', pr.yawSig); setValDisplay('yawSigVal', pr.yawSig, 1);
+
+  // Update base periods to storm values
+  baseYawPeriod = pr.yawPeriod;
+  basePitchPeriod = pr.pitchPeriod;
+  baseRollPeriod = pr.rollPeriod;
+}
+
+// === TACKING ===
+// Smooth heading transition to opposite tack at ~20 deg/sec
+function startTack(btnEl) {
+  if (tackAnimating) return;
+
+  const p = getParams();
+  const twd = p.windDir;
+  const variation = p.variation;
+  const currentHdgMag = p.boatHdg;
+  const currentHdgTrue = (currentHdgMag + variation + 360) % 360;
+
+  // Current TWA
+  let twa = ((twd - currentHdgTrue + 540) % 360) - 180;
+
+  // Target heading: mirror TWA across wind axis (opposite tack)
+  // New TWA = -twa, so new hdgTrue = twd - (-twa) = twd + twa
+  const targetHdgTrue = (twd + twa + 360) % 360;
+  const targetHdgMag = (targetHdgTrue - variation + 360) % 360;
+
+  // Determine shortest rotation direction
+  let delta = targetHdgMag - currentHdgMag;
+  // Normalize to -180..+180
+  while (delta > 180) delta -= 360;
+  while (delta < -180) delta += 360;
+
+  if (Math.abs(delta) < 2) return; // already there
+
+  tackStartHdg = currentHdgMag;
+  tackTargetHdg = targetHdgMag;
+  tackDirection = delta > 0 ? 1 : -1;
+  tackAnimating = true;
+
+  // Visual feedback
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  btnEl.classList.add('tacking-active');
+
+  const totalDeg = Math.abs(delta);
+  const durationMs = (totalDeg / tackRate) * 1000;
+  const startTime = performance.now();
+
+  function animateTack(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / durationMs, 1);
+
+    // Ease in-out for natural tack feel
+    const eased = progress < 0.5
+      ? 2 * progress * progress
+      : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+    const currentHdg = tackStartHdg + tackDirection * totalDeg * eased;
+    setBoatHeading(currentHdg);
+
+    if (progress < 1) {
+      requestAnimationFrame(animateTack);
+    } else {
+      // Tack complete
+      setBoatHeading(tackTargetHdg);
+      tackAnimating = false;
+      btnEl.classList.remove('tacking-active');
+    }
+  }
+  requestAnimationFrame(animateTack);
+}
+
+// === SIMULATION LOOP ===
+function simStep() {
+  const rate = +document.getElementById('rateSelect').value / 1000;
+  simTime += rate;
+  sampleCount++;
+
+  const s = computeSample(simTime);
+  updateOutputs(s);
+
+  pushWave('yaw',   s.yawRate);
+  pushWave('pitch', s.pitch);
+  pushWave('roll',  s.roll);
+
+  const p = getParams();
+  drawWave('yawViz',   waveHistory.yaw,   '#e63946', -(p.yawAmp+2),   p.yawAmp+2,   s.yawRate);
+  drawWave('pitchViz', waveHistory.pitch, '#e63946', -(p.pitchAmp+2), p.pitchAmp+2, s.pitch);
+  drawWave('rollViz',  waveHistory.roll,  '#e63946', p.rollMean-(p.rollAmp+5), p.rollMean+(p.rollAmp+5), s.roll);
+
+  const h = Math.floor(simTime / 3600);
+  const m = Math.floor((simTime % 3600) / 60);
+  const sec = simTime % 60;
+  document.getElementById('timeDisplay').textContent =
+    `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toFixed(3).padStart(6,'0')}`;
+  document.getElementById('counterDisplay').textContent =
+    `Samples: ${sampleCount} | T: ${simTime.toFixed(3)}s`;
+
+  if (sampleCount % 5 === 0) addStreamLine(s);
+}
+
+function startSim() {
+  if (simRunning) return;
+  simRunning = true;
+  document.getElementById('statusDot').style.background = 'var(--accent3)';
+  document.getElementById('statusLabel').textContent = 'RUNNING';
+  document.getElementById('statusLabel').style.color = 'var(--accent3)';
+  const rate = +document.getElementById('rateSelect').value;
+  simTimer = setInterval(simStep, rate);
+  syncParams().then(() => {
+    fetch('/sailsim-plugin/control', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'start', rate })
+    }).catch(e => console.warn('Server sim start failed', e));
+  });
+}
+
+function stopSim() {
+  simRunning = false;
+  clearInterval(simTimer);
+  document.getElementById('statusDot').style.background = 'var(--accent2)';
+  document.getElementById('statusLabel').textContent = 'PAUSED';
+  document.getElementById('statusLabel').style.color = 'var(--accent2)';
+  fetch('/sailsim-plugin/control', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'stop' })
+  }).catch(e => console.warn('Server sim stop failed', e));
+}
+
+function resetSim() {
+  simRunning = false;
+  clearInterval(simTimer);
+  simTime = 0; sampleCount = 0;
+  waveHistory.yaw = []; waveHistory.pitch = []; waveHistory.roll = [];
+  document.getElementById('statusDot').style.background = 'var(--dim)';
+  document.getElementById('statusLabel').textContent = 'STANDBY';
+  document.getElementById('statusLabel').style.color = 'var(--accent3)';
+  document.getElementById('timeDisplay').textContent = '00:00:00.000';
+  document.getElementById('counterDisplay').textContent = 'Samples: 0 | T: 0.000s';
+  document.getElementById('streamBox').innerHTML = '<span style="color:var(--dim)">// Reset. Ready to start.</span>';
+  streamLines = [];
+  ['aws','awa','tws','twa','twd','vmg','stw','sog','hdg','cog','set','dft',
+   'roll','pitch','yaw','mx','my','awsraw'].forEach(k =>
+    document.getElementById('out-'+k).textContent = '--');
+  drawWave('yawViz',   [], '#e63946', -5, 5, 0);
+  drawWave('pitchViz', [], '#e63946', -6, 6, 0);
+  drawWave('rollViz',  [], '#e63946', -5, 5, 0);
+  fetch('/sailsim-plugin/control', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'reset' })
+  }).catch(e => console.warn('Server sim reset failed', e));
+}
+
+// === LOAD SERVER SIM STATE ===
+async function loadSimState() {
+  try {
+    const resp = await fetch('/sailsim-plugin/simstate');
+    if (resp.ok) {
+      const state = await resp.json();
+      if (state.running) {
+        simRunning = true;
+        document.getElementById('statusDot').style.background = 'var(--accent3)';
+        document.getElementById('statusLabel').textContent = 'RUNNING';
+        document.getElementById('statusLabel').style.color = 'var(--accent3)';
+        const rate = state.rate || 1000;
+        simTimer = setInterval(simStep, rate);
+      }
+    }
+  } catch (e) {
+    console.warn('Could not load sim state', e);
+  }
+}
+
+// === INIT ===
+setupCompass('tideCompass', 'tideDirVal', '#f4a261', 45);
+setupCompass('windCompass', 'windDirVal', '#00b4d8', 225);
+setupCompass('boatCompass', 'boatHdgVal', '#52b788', 45);
+syncAllSliders();
+drawWave('yawViz',   [], '#e63946', -5, 5, 0);
+drawWave('pitchViz', [], '#e63946', -6, 6, 0);
+drawWave('rollViz',  [], '#e63946', -5, 5, 0);
+
+document.getElementById('rateSelect').addEventListener('change', function() {
+  if (simRunning) {
+    const rate = +this.value;
+    clearInterval(simTimer);
+    simTimer = setInterval(simStep, rate);
+    fetch('/sailsim-plugin/control', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'start', rate })
+    }).catch(e => console.warn('Server sim rate change failed', e));
+  }
+});
+
+loadConfig();
+loadSimState();
+</script>
+</body>
+</html>

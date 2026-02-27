@@ -1,0 +1,32 @@
+{
+  "name": "sailsim-plugin",
+  "version": "1.0.0",
+  "description": "Sailing sensor simulator for Signal K — generates realistic wind, heading, speed, and attitude data",
+  "main": "index.js",
+  "keywords": [
+    "signalk-node-server-plugin",
+    "signalk-webapp",
+    "signalk",
+    "sailing",
+    "simulator"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.22.1"
+  },
+  "signalk-plugin": {
+    "schema": "./index.js",
+    "requiresModel": false
+  },
+  "signalk": {
+    "displayName": "Sailing Simulator",
+    "webapps": [
+      {
+        "id": "sailsim-plugin",
+        "name": "Sailing Simulator",
+        "start": "/sailsim-plugin/"
+      }
+    ]
+  }
+}
