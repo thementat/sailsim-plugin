@@ -9,6 +9,14 @@
   href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap">
 <noscript><link rel="stylesheet"
   href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap"></noscript>
+<script>
+/* Apply saved theme before first paint to avoid flash */
+(function(){
+  var sz=parseInt(localStorage.getItem('sp-font-size'),10);
+  if([11,13,15,17,19,21].indexOf(sz)>=0) document.documentElement.style.fontSize=sz+'px';
+  if(localStorage.getItem('sp-night')==='1') document.documentElement.classList.add('night');
+}());
+</script>
 <style>
 
   :root {
@@ -26,13 +34,29 @@
     --glow:     rgba(0,180,216,0.15);
   }
 
+  /* ---- NIGHT MODE — high-contrast red on dark ---- */
+  :root.night {
+    --bg:      #080000;
+    --panel:   #100000;
+    --card:    #150000;
+    --border:  #3a0808;
+    --accent:  #ff3030;
+    --accent2: #ff6020;
+    --accent3: #ff2828;
+    --red:     #ff5555;
+    --text:    #ff9080;
+    --dim:     #6b1515;
+    --bright:  #ffccc0;
+    --glow:    rgba(255,40,40,0.12);
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
     background: var(--bg);
     color: var(--text);
     font-family: 'Rajdhani', sans-serif;
-    font-size: 14px;
+    font-size: 1rem;
     min-height: 100vh;
     overflow-x: hidden;
   }
@@ -48,7 +72,7 @@
     position: sticky; top: 0; z-index: 100;
   }
   .logo {
-    font-size: 20px;
+    font-size: 1.4rem;
     font-weight: 700;
     letter-spacing: 3px;
     text-transform: uppercase;
@@ -58,7 +82,7 @@
   .status-bar {
     display: flex; gap: 20px; align-items: center;
     font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
+    font-size: 0.75rem;
   }
   .status-dot {
     width: 8px; height: 8px; border-radius: 50%;
@@ -70,7 +94,7 @@
 
   .time-display {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 13px;
+    font-size: 0.9rem;
     color: var(--accent);
     letter-spacing: 2px;
   }
@@ -109,7 +133,7 @@
   .section-card.output-card::before { background: linear-gradient(90deg, var(--dim), transparent); }
 
   .card-title {
-    font-size: 11px;
+    font-size: 0.75rem;
     letter-spacing: 4px;
     text-transform: uppercase;
     font-weight: 600;
@@ -118,7 +142,7 @@
     align-items: center;
     gap: 8px;
   }
-  .card-title .icon { font-size: 14px; }
+  .card-title .icon { font-size: 1rem; }
   .tide-card  .card-title { color: var(--accent2); }
   .wind-card  .card-title { color: var(--accent); }
   .boat-card  .card-title { color: var(--accent3); }
@@ -148,13 +172,13 @@
   }
   .compass-value {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 28px;
+    font-size: 2rem;
     font-weight: 400;
     color: var(--bright);
     line-height: 1;
   }
   .compass-unit {
-    font-size: 11px;
+    font-size: 0.75rem;
     color: var(--dim);
     letter-spacing: 2px;
     margin-top: 4px;
@@ -170,7 +194,7 @@
     margin-bottom: 4px;
   }
   .param-label {
-    font-size: 10px;
+    font-size: 0.7rem;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: var(--dim);
@@ -178,7 +202,7 @@
   }
   .param-val {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 12px;
+    font-size: 0.85rem;
     color: var(--bright);
   }
   input[type=range] {
@@ -227,7 +251,7 @@
     gap: 10px;
   }
   .attitude-label {
-    font-size: 10px;
+    font-size: 0.7rem;
     letter-spacing: 3px;
     text-transform: uppercase;
     color: var(--red);
@@ -239,7 +263,7 @@
   }
   .attitude-readout {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 22px;
+    font-size: 1.55rem;
     color: var(--bright);
     text-align: center;
   }
@@ -265,7 +289,7 @@
     text-align: center;
   }
   .out-key {
-    font-size: 9px;
+    font-size: 0.65rem;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: var(--dim);
@@ -273,7 +297,7 @@
   }
   .out-val {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 16px;
+    font-size: 1.1rem;
     color: var(--bright);
   }
   .out-val.wind-col  { color: var(--accent); }
@@ -287,7 +311,7 @@
     border-radius: 6px;
     padding: 10px 14px;
     font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
+    font-size: 0.75rem;
     color: var(--accent3);
     height: 100px;
     overflow-y: auto;
@@ -318,7 +342,7 @@
     border-radius: 5px;
     border: 1px solid;
     font-family: 'Rajdhani', sans-serif;
-    font-size: 12px;
+    font-size: 0.85rem;
     font-weight: 600;
     letter-spacing: 2px;
     text-transform: uppercase;
@@ -351,12 +375,12 @@
     color: var(--text);
     padding: 6px 10px;
     font-family: 'Rajdhani', sans-serif;
-    font-size: 12px;
+    font-size: 0.85rem;
     letter-spacing: 1px;
   }
   .counter-display {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 12px;
+    font-size: 0.85rem;
     color: var(--dim);
     margin-left: auto;
   }
@@ -375,7 +399,7 @@
     background: transparent;
     color: var(--dim);
     font-family: 'Rajdhani', sans-serif;
-    font-size: 11px;
+    font-size: 0.75rem;
     letter-spacing: 1px;
     cursor: pointer;
     transition: all 0.15s;
@@ -399,7 +423,7 @@
     border-radius: 4px;
     color: var(--bright);
     font-family: 'Share Tech Mono', monospace;
-    font-size: 12px;
+    font-size: 0.85rem;
     padding: 2px 6px;
     width: 60px;
     text-align: right;
@@ -409,7 +433,7 @@
     cursor: not-allowed;
   }
   .var-source {
-    font-size: 9px;
+    font-size: 0.65rem;
     letter-spacing: 1px;
     padding: 1px 6px;
     border-radius: 3px;
@@ -445,6 +469,12 @@
     <div class="status-dot" id="statusDot"></div>
     <span id="statusLabel" style="color:var(--accent3)">STANDBY</span>
     <div class="time-display" id="timeDisplay">00:00:00.000</div>
+    <div style="display:flex;align-items:center;gap:5px;margin-left:12px;border-left:1px solid var(--border);padding-left:12px">
+      <button class="preset-btn" onclick="ssTheme.fontDown()" title="Decrease font size" style="padding:2px 8px">A&minus;</button>
+      <span id="ss-font-sz" style="font-family:'Share Tech Mono',monospace;font-size:0.7rem;color:var(--dim);min-width:30px;text-align:center"></span>
+      <button class="preset-btn" onclick="ssTheme.fontUp()" title="Increase font size" style="padding:2px 8px">A+</button>
+      <button class="preset-btn" id="ss-night-btn" onclick="ssTheme.toggleNight()" title="Toggle night mode" style="padding:2px 10px;min-width:60px"></button>
+    </div>
   </div>
 </header>
 
@@ -739,7 +769,7 @@
     <option value="200">5 Hz</option>
     <option value="1000">1 Hz</option>
   </select>
-  <span style="color:var(--dim);font-size:11px;letter-spacing:1px">OUTPUT RATE</span>
+  <span style="color:var(--dim);font-size:0.75rem;letter-spacing:1px">OUTPUT RATE</span>
   <div class="counter-display" id="counterDisplay">Samples: 0 | T: 0.000s</div>
 </div>
 
@@ -1482,6 +1512,48 @@ document.getElementById('rateSelect').addEventListener('change', function() {
 
 loadConfig();
 loadSimState();
+
+// === FONT SIZE & NIGHT MODE ===
+(function () {
+  var SIZES   = [11, 13, 15, 17, 19, 21];
+  var LS_SIZE  = 'sp-font-size';
+  var LS_NIGHT = 'sp-night';
+
+  function getSize() {
+    var v = parseInt(localStorage.getItem(LS_SIZE), 10);
+    return SIZES.indexOf(v) >= 0 ? v : 14;
+  }
+  function getNight() { return localStorage.getItem(LS_NIGHT) === '1'; }
+
+  function applySize(sz) {
+    document.documentElement.style.fontSize = sz + 'px';
+    localStorage.setItem(LS_SIZE, sz);
+    var el = document.getElementById('ss-font-sz');
+    if (el) el.textContent = sz + 'px';
+  }
+  function applyNight(on) {
+    document.documentElement.classList.toggle('night', on);
+    localStorage.setItem(LS_NIGHT, on ? '1' : '0');
+    var el = document.getElementById('ss-night-btn');
+    if (el) el.textContent = on ? '\u2600 DAY' : '\u263D NIGHT';
+  }
+
+  // Sync display on load (settings applied at top of page by theme.js if present, else apply now)
+  applySize(getSize());
+  applyNight(getNight());
+
+  window.ssTheme = {
+    fontDown: function () {
+      var idx = SIZES.indexOf(getSize());
+      if (idx > 0) applySize(SIZES[idx - 1]);
+    },
+    fontUp: function () {
+      var idx = SIZES.indexOf(getSize());
+      if (idx < SIZES.length - 1) applySize(SIZES[idx + 1]);
+    },
+    toggleNight: function () { applyNight(!getNight()); }
+  };
+}());
 </script>
 </body>
 </html>

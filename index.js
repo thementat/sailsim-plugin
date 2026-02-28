@@ -57,7 +57,6 @@ function computeSample(p, t) {
 
   const awVx = twVx - bVx;
   const awVy = twVy - bVy;
-  const aws  = Math.sqrt(awVx * awVx + awVy * awVy);
 
   // atan2(awVx,awVy) gives direction the wind vector is going TO; +180 converts to FROM
   const awFromDeg = (Math.atan2(awVx, awVy) / DEG_TO_RAD + 180 + 360) % 360;
@@ -67,7 +66,7 @@ function computeSample(p, t) {
 
   const sinH = Math.sin(hdgRad), cosH = Math.cos(hdgRad);
   const mastVxGlobal = mastVx * sinH + mastVy * cosH;
-  const mastVyGlobal = mastVx * cosH - mastVy * sinH; // eslint-disable-line no-unused-vars
+  const mastVyGlobal = mastVx * cosH - mastVy * sinH;
 
   const tideDirRad = tideDir * DEG_TO_RAD;
   const tiVx = tideSpd * Math.sin(tideDirRad);
@@ -80,13 +79,17 @@ function computeSample(p, t) {
   const twaDeg = ((twd - hdgTrue) % 360 + 360) % 360;
   const twa = twaDeg > 180 ? twaDeg - 360 : twaDeg;
 
-  // awsRaw: apparent wind at masthead sensor including mast motion
+  // awsRaw/awaRawRel: apparent wind at masthead sensor including mast motion
   const awRawVx = awVx + mastVxGlobal;
-  const awRawVy = awVy + (mastVx * cosH - mastVy * sinH);
-  const awsRaw  = Math.sqrt(awRawVx * awRawVx + awRawVy * awRawVy); // eslint-disable-line no-unused-vars
+  const awRawVy = awVy + mastVyGlobal;
+  const awsRaw  = Math.sqrt(awRawVx * awRawVx + awRawVy * awRawVy);
+  const awRawFromDeg = (Math.atan2(awRawVx, awRawVy) / DEG_TO_RAD + 180 + 360) % 360;
+  let awaRawRel = awRawFromDeg - hdgTrue;
+  while (awaRawRel >  180) awaRawRel -= 360;
+  while (awaRawRel < -180) awaRawRel += 360;
 
   return { tws, twd, hdg: hdgMag, stw, sog, cog, tideDir, tideSpd,
-           aws, awa: awaRel, twa, roll, pitch, yawRate };
+           aws: awsRaw, awa: awaRawRel, twa, roll, pitch, yawRate };
 }
 
 function buildSkValues(s, variationDeg) {
