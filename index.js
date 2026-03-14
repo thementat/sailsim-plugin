@@ -89,7 +89,8 @@ function computeSample(p, t) {
   while (awaRawRel < -180) awaRawRel += 360;
 
   return { tws, twd, hdg: hdgMag, stw, sog, cog, tideDir, tideSpd,
-           aws: awsRaw, awa: awaRawRel, twa, roll, pitch, yawRate };
+           aws: awsRaw, awa: awaRawRel, twa, roll, pitch, yawRate,
+           pitchRate: pitchRateRad, rollRate: rollRateRad };
 }
 
 function buildSkValues(s, variationDeg) {
@@ -110,6 +111,8 @@ function buildSkValues(s, variationDeg) {
     { path: 'environment.current.drift',         value: s.tideSpd  * KTS_TO_MS },
     { path: 'navigation.attitude',               value: { roll: s.roll * DEG_TO_RAD, pitch: s.pitch * DEG_TO_RAD, yaw: hdgTrue } },
     { path: 'navigation.rateOfTurn',             value: s.yawRate  * DEG_TO_RAD },
+    { path: 'navigation.attitude.pitchRate',     value: s.pitchRate },
+    { path: 'navigation.attitude.rollRate',      value: s.rollRate  },
   ];
 }
 
