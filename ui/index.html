@@ -783,12 +783,9 @@ let mastHeight = 18; // meters, loaded from plugin config
 let magVariation = 0; // degrees, positive = East
 const DEG = Math.PI / 180;
 
-// Tacking state
-let tackAnimating = false;
-let tackStartHdg = 0;
-let tackTargetHdg = 0;
+// Heading animation state (shared by tack and preset transitions)
+let headingAnimating = false;
 let tackRate = 20; // deg/sec
-let tackDirection = 1; // +1 or -1
 
 // Base motion periods (saved when user adjusts, used for preset scaling)
 let baseYawPeriod = 8;
@@ -921,7 +918,12 @@ function computeSample(t) {
   const mastVyGlobal = mastVx * cosH - mastVy * sinH;
   const awRawVx = awVx + mastVxGlobal;
   const awRawVy = awVy + mastVyGlobal;
-  const awsRaw = Math.sqrt(awRawVx*awRawVx + awRawVy*awRawVy);
+  // Heel correction: sensor tilts with boat heel, reducing athwart component by cos(heel)
+  const awRawFore    = awRawVx * sinH + awRawVy * cosH;
+  const awRawAthwart = awRawVx * cosH - awRawVy * sinH;
+  const awRawAthwartCorr = awRawAthwart * Math.cos(rollRad);
+  const awsRaw = Math.sqrt(awRawFore * awRawFore + awRawAthwartCorr * awRawAthwartCorr);
+  const awaRaw = Math.atan2(-awRawAthwartCorr, -awRawFore) / DEG;
 
   // Tide vector
   const tideDirRad = tideDir * DEG;
@@ -943,7 +945,7 @@ function computeSample(t) {
 
   return {
     tws, twd, hdg: hdgMag, stw, sog, cog, tideDir, tideSpd,
-    aws, awa: awaRel, awsRaw,
+    aws, awa: awaRel, awsRaw, awaRaw,
     twa, vmg,
     roll, pitch, yawRate, mastVx, mastVy,
     variation: p.variation,
@@ -1158,9 +1160,9 @@ function setupCompass(canvasId, valueId, color, defaultAngle) {
   }
   function update(e) {
     if (!dragging) return;
-    const angle = getAngle(e);
+    const angle = Math.round(getAngle(e));
     canvas.dataset.angle = angle;
-    document.getElementById(valueId).textContent = Math.round(angle).toString().padStart(3,'0');
+    document.getElementById(valueId).textContent = angle.toString().padStart(3,'0');
     drawCompass(canvasId, angle, color);
     scheduleParamSync();
   }
@@ -1210,13 +1212,14 @@ function setBoatHeading(hdgMag) {
   document.getElementById('boatCompass').dataset.angle = hdgMag;
   document.getElementById('boatHdgVal').textContent = Math.round(hdgMag).toString().padStart(3,'0');
   drawCompass('boatCompass', hdgMag, '#52b788');
+  scheduleParamSync();
 }
 
 // === PRESETS ===
 // Presets only change boat heading (to achieve target AWA) and motion periods.
 // They do NOT change wind, tide, STW, noise, roll mean, or amplitudes.
 function applyPreset(name, btnEl) {
-  if (tackAnimating) return; // don't interrupt a tack
+  if (headingAnimating) return; // don't interrupt an ongoing heading transition
 
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
   if (btnEl) btnEl.classList.add('active');
@@ -1258,7 +1261,7 @@ function applyPreset(name, btnEl) {
   // hdgTrue = twd + targetAWA  (starboard tack)
   const hdgTrue = (twd + targetAWA + 360) % 360;
   const hdgMag = (hdgTrue - variation + 360) % 360;
-  setBoatHeading(hdgMag);
+  smoothHeadingTo(hdgMag);
 
   // Scale motion periods relative to base periods
   const yp = baseYawPeriod * periodScale;
@@ -1292,7 +1295,7 @@ function applyStormPreset() {
   setSlider('boatSTW', pr.boatSTW); setValDisplay('boatSTWVal', pr.boatSTW, 1);
   setSlider('boatHdgSig', pr.boatHdgSig); setValDisplay('boatHdgSigVal', pr.boatHdgSig, 1);
   setSlider('boatSTWSig', pr.boatSTWSig); setValDisplay('boatSTWSigVal', pr.boatSTWSig, 2);
-  setBoatHeading(pr.boatHdg);
+  smoothHeadingTo(pr.boatHdg);
 
   // Tide
   setSlider('tideSpeed', pr.tideSpeed); setValDisplay('tideSpeedVal', pr.tideSpeed, 1);
@@ -1320,10 +1323,52 @@ function applyStormPreset() {
   baseRollPeriod = pr.rollPeriod;
 }
 
+// === SMOOTH HEADING TRANSITION ===
+// Animates boat heading from current to target at tackRate deg/sec with ease-in-out
+function smoothHeadingTo(targetHdgMag, onComplete, onFrame) {
+  const currentHdgMag = +(document.getElementById('boatCompass').dataset.angle ?? 0);
+  let delta = targetHdgMag - currentHdgMag;
+  while (delta > 180) delta -= 360;
+  while (delta < -180) delta += 360;
+
+  if (Math.abs(delta) < 0.5) {
+    setBoatHeading(targetHdgMag);
+    if (onFrame) onFrame(1);
+    if (onComplete) onComplete();
+    return;
+  }
+
+  headingAnimating = true;
+  const startHdg = currentHdgMag;
+  const direction = delta > 0 ? 1 : -1;
+  const totalDeg = Math.abs(delta);
+  const durationMs = (totalDeg / tackRate) * 1000;
+  const startTime = performance.now();
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / durationMs, 1);
+    const eased = progress < 0.5
+      ? 2 * progress * progress
+      : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+    setBoatHeading(startHdg + direction * totalDeg * eased);
+    if (onFrame) onFrame(eased);
+    const s = computeSample(simTime);
+    updateOutputs(s);
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      setBoatHeading(targetHdgMag);
+      headingAnimating = false;
+      if (onComplete) onComplete();
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
 // === TACKING ===
-// Smooth heading transition to opposite tack at ~20 deg/sec
 function startTack(btnEl) {
-  if (tackAnimating) return;
+  if (headingAnimating) return;
 
   const p = getParams();
   const twd = p.windDir;
@@ -1331,57 +1376,35 @@ function startTack(btnEl) {
   const currentHdgMag = p.boatHdg;
   const currentHdgTrue = (currentHdgMag + variation + 360) % 360;
 
-  // Current TWA
-  let twa = ((twd - currentHdgTrue + 540) % 360) - 180;
-
-  // Target heading: mirror TWA across wind axis (opposite tack)
-  // New TWA = -twa, so new hdgTrue = twd - (-twa) = twd + twa
+  // Mirror TWA across wind axis to get opposite tack heading
+  const twa = ((twd - currentHdgTrue + 540) % 360) - 180;
   const targetHdgTrue = (twd + twa + 360) % 360;
   const targetHdgMag = (targetHdgTrue - variation + 360) % 360;
 
-  // Determine shortest rotation direction
   let delta = targetHdgMag - currentHdgMag;
-  // Normalize to -180..+180
   while (delta > 180) delta -= 360;
   while (delta < -180) delta += 360;
+  if (Math.abs(delta) < 2) return;
 
-  if (Math.abs(delta) < 2) return; // already there
-
-  tackStartHdg = currentHdgMag;
-  tackTargetHdg = targetHdgMag;
-  tackDirection = delta > 0 ? 1 : -1;
-  tackAnimating = true;
-
-  // Visual feedback
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
   btnEl.classList.add('tacking-active');
 
-  const totalDeg = Math.abs(delta);
-  const durationMs = (totalDeg / tackRate) * 1000;
-  const startTime = performance.now();
+  const startRollMean = +document.getElementById('rollMean').value;
+  const targetRollMean = -startRollMean;
 
-  function animateTack(now) {
-    const elapsed = now - startTime;
-    const progress = Math.min(elapsed / durationMs, 1);
-
-    // Ease in-out for natural tack feel
-    const eased = progress < 0.5
-      ? 2 * progress * progress
-      : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-
-    const currentHdg = tackStartHdg + tackDirection * totalDeg * eased;
-    setBoatHeading(currentHdg);
-
-    if (progress < 1) {
-      requestAnimationFrame(animateTack);
-    } else {
-      // Tack complete
-      setBoatHeading(tackTargetHdg);
-      tackAnimating = false;
+  smoothHeadingTo(targetHdgMag,
+    () => {
       btnEl.classList.remove('tacking-active');
+      setSlider('rollMean', targetRollMean);
+      setValDisplay('rollMeanVal', targetRollMean, 1);
+      scheduleParamSync();
+    },
+    (t) => {
+      const roll = startRollMean + (targetRollMean - startRollMean) * t;
+      setSlider('rollMean', roll);
+      setValDisplay('rollMeanVal', roll, 1);
     }
-  }
-  requestAnimationFrame(animateTack);
+  );
 }
 
 // === SIMULATION LOOP ===

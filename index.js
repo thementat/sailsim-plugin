@@ -79,14 +79,15 @@ function computeSample(p, t) {
   const twaDeg = ((twd - hdgTrue) % 360 + 360) % 360;
   const twa = twaDeg > 180 ? twaDeg - 360 : twaDeg;
 
-  // awsRaw/awaRawRel: apparent wind at masthead sensor including mast motion
+  // awsRaw/awaRawRel: apparent wind at masthead sensor including mast motion + heel correction
+  // Heel tilts the sensor athwartships, reducing the measured athwart component by cos(heel)
   const awRawVx = awVx + mastVxGlobal;
   const awRawVy = awVy + mastVyGlobal;
-  const awsRaw  = Math.sqrt(awRawVx * awRawVx + awRawVy * awRawVy);
-  const awRawFromDeg = (Math.atan2(awRawVx, awRawVy) / DEG_TO_RAD + 180 + 360) % 360;
-  let awaRawRel = awRawFromDeg - hdgTrue;
-  while (awaRawRel >  180) awaRawRel -= 360;
-  while (awaRawRel < -180) awaRawRel += 360;
+  const awRawFore    = awRawVx * sinH + awRawVy * cosH;
+  const awRawAthwart = awRawVx * cosH - awRawVy * sinH;
+  const awRawAthwartCorr = awRawAthwart * Math.cos(rollRad);
+  const awsRaw  = Math.sqrt(awRawFore * awRawFore + awRawAthwartCorr * awRawAthwartCorr);
+  const awaRawRel = Math.atan2(-awRawAthwartCorr, -awRawFore) / DEG_TO_RAD;
 
   return { tws, twd, hdg: hdgMag, stw, sog, cog, tideDir, tideSpd,
            aws: awsRaw, awa: awaRawRel, twa, roll, pitch, yawRate,
