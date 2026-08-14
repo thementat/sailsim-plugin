@@ -795,7 +795,7 @@ let baseRollPeriod = 4;
 // === LOAD CONFIG FROM PLUGIN ===
 async function loadConfig() {
   try {
-    const resp = await fetch('/sailsim-plugin/config');
+    const resp = await fetch('/sailsim/config');
     if (resp.ok) {
       const cfg = await resp.json();
       mastHeight = cfg.mastHeight || 18;
@@ -1007,7 +1007,7 @@ function addStreamLine(s) {
 let paramSyncTimer = null;
 async function syncParams() {
   try {
-    await fetch('/sailsim-plugin/params', {
+    await fetch('/sailsim/params', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(getParams())
@@ -1445,7 +1445,7 @@ function startSim() {
   const rate = +document.getElementById('rateSelect').value;
   simTimer = setInterval(simStep, rate);
   syncParams().then(() => {
-    fetch('/sailsim-plugin/control', {
+    fetch('/sailsim/control', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'start', rate })
@@ -1459,7 +1459,7 @@ function stopSim() {
   document.getElementById('statusDot').style.background = 'var(--accent2)';
   document.getElementById('statusLabel').textContent = 'PAUSED';
   document.getElementById('statusLabel').style.color = 'var(--accent2)';
-  fetch('/sailsim-plugin/control', {
+  fetch('/sailsim/control', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'stop' })
@@ -1484,7 +1484,7 @@ function resetSim() {
   drawWave('yawViz',   [], '#e63946', -5, 5, 0);
   drawWave('pitchViz', [], '#e63946', -6, 6, 0);
   drawWave('rollViz',  [], '#e63946', -5, 5, 0);
-  fetch('/sailsim-plugin/control', {
+  fetch('/sailsim/control', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'reset' })
@@ -1494,7 +1494,7 @@ function resetSim() {
 // === LOAD SERVER SIM STATE ===
 async function loadSimState() {
   try {
-    const resp = await fetch('/sailsim-plugin/simstate');
+    const resp = await fetch('/sailsim/simstate');
     if (resp.ok) {
       const state = await resp.json();
       if (state.running) {
@@ -1525,7 +1525,7 @@ document.getElementById('rateSelect').addEventListener('change', function() {
     const rate = +this.value;
     clearInterval(simTimer);
     simTimer = setInterval(simStep, rate);
-    fetch('/sailsim-plugin/control', {
+    fetch('/sailsim/control', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'start', rate })

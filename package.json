@@ -23,9 +23,9 @@
     "displayName": "Sailing Simulator",
     "webapps": [
       {
-        "id": "sailsim-plugin",
+        "id": "sailsim",
         "name": "Sailing Simulator",
-        "start": "/sailsim-plugin/"
+        "start": "/sailsim/"
       }
     ]
   }

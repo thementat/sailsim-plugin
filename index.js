@@ -122,7 +122,7 @@ function buildSkValues(s, variationDeg) {
 module.exports = function (app) {
   const plugin = {};
 
-  plugin.id = "sailsim-plugin";
+  plugin.id = "sailsim";
   plugin.name = "Sailing Simulator";
   plugin.description =
     "Generates realistic sailing sensor data (wind, heading, speed, attitude) for testing downstream consumers";
@@ -208,9 +208,9 @@ module.exports = function (app) {
     router.use(express.json());
 
     if (app.use) {
-      app.use("/sailsim-plugin", express.static(staticDir));
-      app.use("/sailsim-plugin", express.json());
-      app.get("/sailsim-plugin", (req, res) => {
+      app.use("/sailsim", express.static(staticDir));
+      app.use("/sailsim", express.json());
+      app.get("/sailsim", (req, res) => {
         res.sendFile(path.join(staticDir, "index.html"));
       });
     }
@@ -295,13 +295,13 @@ module.exports = function (app) {
     router.post("/data",    dataHandler);
     router.get("/", (req, res) => res.sendFile(path.join(staticDir, "index.html")));
 
-    // Register same handlers on main app for /sailsim-plugin/ webapp access
+    // Register same handlers on main app for /sailsim/ webapp access
     if (app.get && app.post) {
-      app.get("/sailsim-plugin/config",   configHandler);
-      app.get("/sailsim-plugin/simstate", simStateHandler);
-      app.put("/sailsim-plugin/params",   paramsHandler);
-      app.post("/sailsim-plugin/control", controlHandler);
-      app.post("/sailsim-plugin/data",    dataHandler);
+      app.get("/sailsim/config",   configHandler);
+      app.get("/sailsim/simstate", simStateHandler);
+      app.put("/sailsim/params",   paramsHandler);
+      app.post("/sailsim/control", controlHandler);
+      app.post("/sailsim/data",    dataHandler);
     }
   };
 
