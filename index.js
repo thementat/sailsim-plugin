@@ -203,7 +203,7 @@ module.exports = function (app) {
   plugin.registerWithRouter = function (router) {
     if (!express) express = require("express");
 
-    const staticDir = path.join(__dirname, "ui");
+    const staticDir = path.join(__dirname, "public");
     router.use(express.static(staticDir));
     router.use(express.json());
 

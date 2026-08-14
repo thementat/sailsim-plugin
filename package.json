@@ -1,5 +1,5 @@
 {
-  "name": "sailsim-plugin",
+  "name": "@salishseasystems/signalk-sailsim",
   "version": "1.0.0",
   "description": "Sailing sensor simulator for Signal K — generates realistic wind, heading, speed, and attitude data",
   "main": "index.js",
