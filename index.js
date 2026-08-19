@@ -123,7 +123,7 @@ module.exports = function (app) {
   const plugin = {};
 
   plugin.id = "sailsim";
-  plugin.name = "Sailing Simulator";
+  plugin.name = "SSS: Sailing Simulator";
   plugin.description =
     "Generates realistic sailing sensor data (wind, heading, speed, attitude) for testing downstream consumers";
 

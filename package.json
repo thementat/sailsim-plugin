@@ -20,7 +20,7 @@
     "requiresModel": false
   },
   "signalk": {
-    "displayName": "Sailing Simulator",
+    "displayName": "SSS: Sailing Simulator",
     "webapps": [
       {
         "id": "sailsim",
