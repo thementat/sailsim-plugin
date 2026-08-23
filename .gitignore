@@ -1,1 +1,21 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Signal K runtime artifacts
+config.json
+*.log
+
+# OS junk
+.DS_Store
+
+# Build output (if any)
+dist/
+build/
+
+# Editor
+.vscode/
+
+# Working notes
 issues.md
